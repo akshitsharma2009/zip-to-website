@@ -14,7 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      consent_log: {
+        Row: {
+          agreed_at: string
+          id: string
+          policy_version: string
+          user_id: string
+        }
+        Insert: {
+          agreed_at?: string
+          id?: string
+          policy_version: string
+          user_id?: string
+        }
+        Update: {
+          agreed_at?: string
+          id?: string
+          policy_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      songs: {
+        Row: {
+          artist: string
+          created_at: string
+          id: string
+          mbid: string
+          title: string
+          year: number | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          artist: string
+          created_at?: string
+          id?: string
+          mbid: string
+          title: string
+          year?: number | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          id?: string
+          mbid?: string
+          title?: string
+          year?: number | null
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
