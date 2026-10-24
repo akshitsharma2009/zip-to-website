@@ -9,6 +9,14 @@ import { APP_NAME } from '@/lib/envoke-constants';
 
 type Mode = 'login' | 'signup';
 
+interface FieldErrors {
+  email?: string;
+  password?: string;
+  age?: string;
+  terms?: string;
+  form?: string;
+}
+
 export default function AuthPage() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, user, loading } = useAuth();
   const navigate = useRouter().navigate;
@@ -17,7 +25,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [termsConfirmed, setTermsConfirmed] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
