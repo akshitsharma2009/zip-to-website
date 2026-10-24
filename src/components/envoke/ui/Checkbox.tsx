@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: ReactNode;
-  error?: string;
+  error?: string | undefined;
 }
 
 export function Checkbox({ label, error, className = '', id, checked, ...props }: CheckboxProps) {
