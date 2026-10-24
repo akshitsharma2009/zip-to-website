@@ -41,7 +41,7 @@ export default function AuthPage() {
   };
 
   const validate = (): boolean => {
-    const next: Record<string, string> = {};
+    const next: FieldErrors = {};
     if (!email) next.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = 'Enter a valid email address';
     if (!password) next.password = 'Password is required';
