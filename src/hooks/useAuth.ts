@@ -20,10 +20,15 @@ export function useAuth() {
   const consentCheckedRef = useRef(false);
 
   const recordConsent = useCallback(async (userId: string) => {
-    const { error } = await supabase.from('consent_log').insert({
-      user_id: userId,
-      policy_version: POLICY_VERSION,
-    });
+    // onConflict + ignoreDuplicates makes this idempotent: both the session
+    // check and the SIGNED_IN listener can attempt the insert concurrently
+    // and the duplicate becomes a no-op instead of a duplicate-key error.
+    const { error } = await supabase
+      .from('consent_log')
+      .upsert(
+        { user_id: userId, policy_version: POLICY_VERSION },
+        { onConflict: 'user_id,policy_version', ignoreDuplicates: true },
+      );
     if (error) {
       console.error('Failed to record consent:', error.message);
     }
