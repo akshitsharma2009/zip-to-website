@@ -20,16 +20,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('consent_log')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('agreed_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        setConsent(data as ConsentLog | null);
-      });
+    let cancelled = false;
+    const loadConsent = () => {
+      supabase
+        .from('consent_log')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('agreed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!cancelled) setConsent(data as ConsentLog | null);
+        });
+    };
+    loadConsent();
+    // The consent write can still be in flight right after sign-in; re-check
+    // once so the card doesn't read as permanently empty.
+    const retry = setTimeout(loadConsent, 2500);
+    return () => {
+      cancelled = true;
+      clearTimeout(retry);
+    };
   }, [user]);
 
   if (loading) {
