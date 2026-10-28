@@ -24,7 +24,7 @@ The project uses **Bolt's own built-in database and auth** (not a separate Supab
 - [ ] "Export my data" button next to account deletion — client-side aggregation of the user's own account info, memories, and `consent_log` rows (all already readable under existing RLS) into a downloaded JSON file; no new backend logic required
 - [ ] `songs` table with `mbid` (MusicBrainz ID) as a **UNIQUE** column — this must exist before any song-insert logic is built
 - [ ] Song search/insert flow: query MusicBrainz first, then `INSERT ... ON CONFLICT (mbid) DO NOTHING` to avoid duplicate races
-- [ ] `memories` table with `is_public` flag + RLS policy (public OR owner)
+- [x] `memories` table with `is_public` flag + RLS policy (public OR owner)
 - [ ] Private `memory-images` storage bucket + `{memory_id}/{filename}` path convention
 - [ ] Storage RLS policy on `memory-images` mirroring the memories visibility rule
 - [ ] Image display always via short-lived `createSignedUrl()` — no permanent/public URLs anywhere in the app
