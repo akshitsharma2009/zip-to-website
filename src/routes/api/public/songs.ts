@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { rankRecordings } from "@/lib/song-ranking";
 
 /**
  * Song catalog API — ported from the archive's `songs` edge function.
  * POST /api/public/songs with JSON body { action: "search" | "add", ... }
  *
- * - "search": proxies MusicBrainz's recording search (no writes).
+ * - "search": proxies MusicBrainz's recording search (no writes) and
+ *   re-ranks results so the original artist-and-title recording outranks
+ *   covers and mashups.
  * - "add": inserts a song into the catalog, deduplicated by its MusicBrainz
  *   ID (mbid). Uses the privileged server client because the songs table
  *   intentionally has no client-side INSERT policy.
@@ -87,8 +90,9 @@ async function handleSearch(body: { query?: unknown }): Promise<Response> {
 
   const trimmed = body.query.trim();
 
+  // Fetch a wider candidate pool, then re-rank so originals lead.
   const mbResponse = await fetch(
-    `https://musicbrainz.org/ws/2/recording?query=${encodeURIComponent(trimmed)}&fmt=json&limit=20`,
+    `https://musicbrainz.org/ws/2/recording?query=${encodeURIComponent(trimmed)}&fmt=json&limit=50`,
     {
       headers: {
         "User-Agent": "Envoke/1.0 (envoke.app)",
