@@ -111,7 +111,18 @@ export function rankRecordings<T extends RankableSong>(
       index,
       score: scoreRecording(recording, rawQuery),
     }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        yearTiebreak(a.recording.year, b.recording.year) ||
+        a.index - b.index,
+    )
     .slice(0, limit)
     .map(({ recording }) => recording);
+}
+
+/** Earlier release years win the tie — originals predate their covers. */
+function yearTiebreak(a: number | null, b: number | null): number {
+  if (a === null || b === null) return (a === null ? 1 : 0) - (b === null ? 1 : 0);
+  return a - b;
 }
