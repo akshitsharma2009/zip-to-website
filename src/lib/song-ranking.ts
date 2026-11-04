@@ -13,6 +13,8 @@ export interface RankableSong {
   title: string;
   artist: string;
   year: number | null;
+  /** Number of releases the recording appears on (popularity signal). */
+  releaseCount?: number;
 }
 
 /** Keywords that mark a result as a cover / variant rather than the original. */
@@ -57,13 +59,38 @@ function tokenize(value: string): string[] {
 }
 
 /**
+ * Query tokens that belong to an artist's name rather than a song title:
+ * tokens that appear in some candidate's full artist name when that whole
+ * name is present in the query (e.g. "eagles" for "Hotel California Eagles").
+ */
+function artistLikeTokens(recordings: RankableSong[], queryTokens: string[]): Set<string> {
+  const tokens = new Set<string>();
+  for (const recording of recordings) {
+    const artistTokens = tokenize(recording.artist);
+    if (artistTokens.length > 0 && artistTokens.every((t) => queryTokens.includes(t))) {
+      artistTokens.forEach((t) => tokens.add(t));
+    }
+  }
+  return tokens;
+}
+
+/**
  * Score one recording against the raw query. Higher is better; identical
  * scores fall back to MusicBrainz's original ordering (stable sort).
+ *
+ * `artistNames` (from {@link artistLikeTokens}) keeps tokens that belong to a
+ * queried artist's name from earning title credit — otherwise cover titles
+ * like "Song - The Eagles" or medleys listing "… Killer Queen …" outscore the
+ * original by borrowing the artist's name into their title.
  */
-export function scoreRecording(song: RankableSong, rawQuery: string): number {
+export function scoreRecording(
+  song: RankableSong,
+  rawQuery: string,
+  artistNames: ReadonlySet<string> = new Set(),
+): number {
   const queryTokens = tokenize(rawQuery);
-  const titleTokens = tokenize(song.title);
   const artistTokens = tokenize(song.artist);
+  const titleTokens = tokenize(song.title).filter((t) => !artistNames.has(t));
   // Variant keywords are scanned on the raw text so bracketed qualifiers such
   // as "(Eagles cover)" are caught too.
   const haystack = `${song.title} ${song.artist}`.toLowerCase();
@@ -72,15 +99,16 @@ export function scoreRecording(song: RankableSong, rawQuery: string): number {
 
   const titleMatches = queryTokens.filter((t) => titleTokens.includes(t));
   const artistMatches = queryTokens.filter((t) => artistTokens.includes(t));
-  score += 10 * titleMatches.length;
-  score += 5 * artistMatches.length;
 
-  // The full title (and artist) appear in the query — strong original signal.
-  if (titleTokens.length > 0 && titleTokens.every((t) => queryTokens.includes(t))) {
-    score += 15;
+  // Title credit scales with how much of the title the query covers, so a
+  // medley that merely contains the queried words can't outscore a recording
+  // whose whole title is the query.
+  if (titleTokens.length > 0) {
+    score += (10 * titleMatches.length * titleMatches.length) / titleTokens.length;
   }
-  if (artistTokens.length > 0 && artistTokens.every((t) => queryTokens.includes(t))) {
-    score += 20;
+  // Artist credit combines token matches with proportional name coverage.
+  if (artistTokens.length > 0) {
+    score += 5 * artistMatches.length + (20 * artistMatches.length) / artistTokens.length;
   }
 
   // Exact title-only match when the query names just the song.
@@ -89,9 +117,16 @@ export function scoreRecording(song: RankableSong, rawQuery: string): number {
     score += 25;
   }
 
-  // Penalise covers, mashups and other variants, one hit per keyword match.
+  // Popularity: the original studio recording usually appears on far more
+  // releases than any single cover, and often carries no release year of its
+  // own, so release count keeps it ahead of dated covers on title-only queries.
+  score += Math.min(song.releaseCount ?? 0, 12);
+
+  // Penalise covers, mashups and other variants. The penalty must outweigh
+  // the extra title-token credit variant titles collect (e.g. medleys that
+  // name several songs), so it stays above that ceiling.
   const variants = haystack.match(new RegExp(VARIANT_PATTERN.source, "gi"));
-  score -= 18 * Math.min(variants?.length ?? 0, 3);
+  score -= 25 * Math.min(variants?.length ?? 0, 3);
 
   return score;
 }
@@ -105,11 +140,13 @@ export function rankRecordings<T extends RankableSong>(
   rawQuery: string,
   limit = 20,
 ): T[] {
+  const artistNames = artistLikeTokens(recordings, tokenize(rawQuery));
+
   return recordings
     .map((recording, index) => ({
       recording,
       index,
-      score: scoreRecording(recording, rawQuery),
+      score: scoreRecording(recording, rawQuery, artistNames),
     }))
     .sort(
       (a, b) =>

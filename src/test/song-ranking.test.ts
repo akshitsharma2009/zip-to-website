@@ -9,6 +9,7 @@ const RESULTS = [
   { mbid: "beast-of-damnation", title: "Hotel California (Eagles cover)", artist: "Beast of Damnation", year: 2019 },
   { mbid: "8bit", title: "Hotel California (8-Bit The Eagles Emulation)", artist: "8-Bit Arcade", year: 2019 },
   { mbid: "pimpdaddy", title: "Hotel California Hurts (Lizzo vs. The Eagles)", artist: "Pimpdaddysupreme", year: 2021 },
+  { mbid: "machalski", title: "Hotel California - The Eagles", artist: "Tadeusz Machalski", year: null },
   { mbid: "original", title: "Hotel California", artist: "Eagles", year: 1977 },
 ];
 
@@ -24,6 +25,14 @@ describe("rankRecordings", () => {
     expect(positions.get("beast-of-damnation")!).toBeGreaterThan(positions.get("original")!);
     expect(positions.get("pimpdaddy")!).toBeGreaterThan(positions.get("original")!);
     expect(positions.get("8bit")!).toBeGreaterThan(positions.get("original")!);
+  });
+
+  it("does not let cover titles naming the artist outscore the original", () => {
+    // "Hotel California - The Eagles" by another artist must not beat the
+    // original by borrowing the artist's name into its title.
+    const ranked = rankRecordings(RESULTS, "Hotel California Eagles");
+    const positions = new Map(ranked.map((r, i) => [r.mbid, i]));
+    expect(positions.get("machalski")!).toBeGreaterThan(positions.get("original")!);
   });
 
   it("keeps the original near the top on a title-only query", () => {
