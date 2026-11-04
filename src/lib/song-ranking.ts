@@ -78,7 +78,8 @@ function artistLikeTokens(recordings: RankableSong[], queryTokens: string[]): Se
  *
  * `artistNames` (from {@link artistLikeTokens}) keeps tokens that belong to a
  * queried artist's name from earning title credit — otherwise cover titles
- * like "Song - The Eagles" outscore the original.
+ * like "Song - The Eagles" or medleys listing "… Killer Queen …" outscore the
+ * original by borrowing the artist's name into their title.
  */
 export function scoreRecording(
   song: RankableSong,
