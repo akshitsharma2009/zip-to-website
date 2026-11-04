@@ -13,6 +13,8 @@ export interface RankableSong {
   title: string;
   artist: string;
   year: number | null;
+  /** Number of releases the recording appears on (popularity signal). */
+  releaseCount?: number;
 }
 
 /** Keywords that mark a result as a cover / variant rather than the original. */
@@ -114,6 +116,11 @@ export function scoreRecording(
   if (titleTokens.join(" ") === queryText) {
     score += 25;
   }
+
+  // Popularity: the original studio recording usually appears on far more
+  // releases than any single cover, and often carries no release year of its
+  // own, so release count keeps it ahead of dated covers on title-only queries.
+  score += Math.min(song.releaseCount ?? 0, 12);
 
   // Penalise covers, mashups and other variants. The penalty must outweigh
   // the extra title-token credit variant titles collect (e.g. medleys that
