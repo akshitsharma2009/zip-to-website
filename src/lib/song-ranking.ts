@@ -98,15 +98,16 @@ export function scoreRecording(
 
   const titleMatches = queryTokens.filter((t) => titleTokens.includes(t));
   const artistMatches = queryTokens.filter((t) => artistTokens.includes(t));
-  score += 10 * titleMatches.length;
-  score += 5 * artistMatches.length;
 
-  // The full title (and artist) appear in the query — strong original signal.
-  if (titleTokens.length > 0 && titleTokens.every((t) => queryTokens.includes(t))) {
-    score += 15;
+  // Title credit scales with how much of the title the query covers, so a
+  // medley that merely contains the queried words can't outscore a recording
+  // whose whole title is the query.
+  if (titleTokens.length > 0) {
+    score += (10 * titleMatches.length * titleMatches.length) / titleTokens.length;
   }
-  if (artistTokens.length > 0 && artistTokens.every((t) => queryTokens.includes(t))) {
-    score += 20;
+  // Artist credit combines token matches with proportional name coverage.
+  if (artistTokens.length > 0) {
+    score += 5 * artistMatches.length + (20 * artistMatches.length) / artistTokens.length;
   }
 
   // Exact title-only match when the query names just the song.
