@@ -9,6 +9,7 @@ const RESULTS = [
   { mbid: "beast-of-damnation", title: "Hotel California (Eagles cover)", artist: "Beast of Damnation", year: 2019 },
   { mbid: "8bit", title: "Hotel California (8-Bit The Eagles Emulation)", artist: "8-Bit Arcade", year: 2019 },
   { mbid: "pimpdaddy", title: "Hotel California Hurts (Lizzo vs. The Eagles)", artist: "Pimpdaddysupreme", year: 2021 },
+  { mbid: "machalski", title: "Hotel California - The Eagles", artist: "Tadeusz Machalski", year: null },
   { mbid: "original", title: "Hotel California", artist: "Eagles", year: 1977 },
 ];
 

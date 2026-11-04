@@ -57,13 +57,39 @@ function tokenize(value: string): string[] {
 }
 
 /**
+ * Query tokens that belong to an artist's name rather than a song title:
+ * tokens that appear in some candidate's full artist name when that whole
+ * name is present in the query (e.g. "eagles" for "Hotel California Eagles").
+ */
+function artistLikeTokens(recordings: RankableSong[], queryTokens: string[]): Set<string> {
+  const tokens = new Set<string>();
+  for (const recording of recordings) {
+    const artistTokens = tokenize(recording.artist);
+    if (artistTokens.length > 0 && artistTokens.every((t) => queryTokens.includes(t))) {
+      artistTokens.forEach((t) => tokens.add(t));
+    }
+  }
+  return tokens;
+}
+
+/**
  * Score one recording against the raw query. Higher is better; identical
  * scores fall back to MusicBrainz's original ordering (stable sort).
+ *
+ * `artistNames` (from {@link artistLikeTokens}) keeps tokens that belong to a
+ * queried artist's name from earning title credit — otherwise cover titles
+ * like "Song - The Eagles" outscore the original.
  */
-export function scoreRecording(song: RankableSong, rawQuery: string): number {
+export function scoreRecording(
+  song: RankableSong,
+  rawQuery: string,
+  artistNames: ReadonlySet<string> = new Set(),
+): number {
   const queryTokens = tokenize(rawQuery);
-  const titleTokens = tokenize(song.title);
   const artistTokens = tokenize(song.artist);
+  const titleTokens = tokenize(song.title).filter(
+    (t) => !artistNames.has(t) || artistTokens.includes(t),
+  );
   // Variant keywords are scanned on the raw text so bracketed qualifiers such
   // as "(Eagles cover)" are caught too.
   const haystack = `${song.title} ${song.artist}`.toLowerCase();
@@ -105,11 +131,13 @@ export function rankRecordings<T extends RankableSong>(
   rawQuery: string,
   limit = 20,
 ): T[] {
+  const artistNames = artistLikeTokens(recordings, tokenize(rawQuery));
+
   return recordings
     .map((recording, index) => ({
       recording,
       index,
-      score: scoreRecording(recording, rawQuery),
+      score: scoreRecording(recording, rawQuery, artistNames),
     }))
     .sort(
       (a, b) =>
