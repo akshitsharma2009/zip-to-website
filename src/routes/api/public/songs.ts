@@ -133,7 +133,9 @@ async function handleSearch(body: { query?: unknown }): Promise<Response> {
     };
   });
 
-  return Response.json({ results }, { headers: corsHeaders });
+  const ranked = rankRecordings(results, trimmed);
+
+  return Response.json({ results: ranked }, { headers: corsHeaders });
 }
 
 async function handleAdd(body: {
