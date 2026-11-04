@@ -115,9 +115,11 @@ export function scoreRecording(
     score += 25;
   }
 
-  // Penalise covers, mashups and other variants, one hit per keyword match.
+  // Penalise covers, mashups and other variants. The penalty must outweigh
+  // the extra title-token credit variant titles collect (e.g. medleys that
+  // name several songs), so it stays above that ceiling.
   const variants = haystack.match(new RegExp(VARIANT_PATTERN.source, "gi"));
-  score -= 18 * Math.min(variants?.length ?? 0, 3);
+  score -= 25 * Math.min(variants?.length ?? 0, 3);
 
   return score;
 }
