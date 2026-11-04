@@ -87,9 +87,7 @@ export function scoreRecording(
 ): number {
   const queryTokens = tokenize(rawQuery);
   const artistTokens = tokenize(song.artist);
-  const titleTokens = tokenize(song.title).filter(
-    (t) => !artistNames.has(t) || artistTokens.includes(t),
-  );
+  const titleTokens = tokenize(song.title).filter((t) => !artistNames.has(t));
   // Variant keywords are scanned on the raw text so bracketed qualifiers such
   // as "(Eagles cover)" are caught too.
   const haystack = `${song.title} ${song.artist}`.toLowerCase();
