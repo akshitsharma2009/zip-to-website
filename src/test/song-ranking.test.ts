@@ -27,6 +27,14 @@ describe("rankRecordings", () => {
     expect(positions.get("8bit")!).toBeGreaterThan(positions.get("original")!);
   });
 
+  it("does not let cover titles naming the artist outscore the original", () => {
+    // "Hotel California - The Eagles" by another artist must not beat the
+    // original by borrowing the artist's name into its title.
+    const ranked = rankRecordings(RESULTS, "Hotel California Eagles");
+    const positions = new Map(ranked.map((r, i) => [r.mbid, i]));
+    expect(positions.get("machalski")!).toBeGreaterThan(positions.get("original")!);
+  });
+
   it("keeps the original near the top on a title-only query", () => {
     const ranked = rankRecordings(RESULTS, "Hotel California");
     expect(ranked[0].mbid).toBe("original");
