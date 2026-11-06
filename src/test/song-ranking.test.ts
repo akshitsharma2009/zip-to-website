@@ -4,13 +4,13 @@ import { rankRecordings, scoreRecording } from "@/lib/song-ranking";
 // Shaped after real MusicBrainz responses for "Hotel California", including
 // the original studio recording (0e0763cb-…) and typical cover/mashup noise.
 const RESULTS = [
-  { mbid: "wind-rhythms", title: "Hotel California (Eagles)", artist: "Wind Rhythms", year: 2001 },
-  { mbid: "the-cover-ops", title: "Hotel California (Eagles)", artist: "The Cover Ops", year: 2016 },
-  { mbid: "beast-of-damnation", title: "Hotel California (Eagles cover)", artist: "Beast of Damnation", year: 2019 },
-  { mbid: "8bit", title: "Hotel California (8-Bit The Eagles Emulation)", artist: "8-Bit Arcade", year: 2019 },
-  { mbid: "pimpdaddy", title: "Hotel California Hurts (Lizzo vs. The Eagles)", artist: "Pimpdaddysupreme", year: 2021 },
-  { mbid: "machalski", title: "Hotel California - The Eagles", artist: "Tadeusz Machalski", year: null },
-  { mbid: "original", title: "Hotel California", artist: "Eagles", year: 1977 },
+  { mbid: "wind-rhythms", title: "Hotel California (Eagles)", artist: "Wind Rhythms", year: 2001, releaseCount: 2 },
+  { mbid: "the-cover-ops", title: "Hotel California (Eagles)", artist: "The Cover Ops", year: 2016, releaseCount: 1 },
+  { mbid: "beast-of-damnation", title: "Hotel California (Eagles cover)", artist: "Beast of Damnation", year: 2019, releaseCount: 1 },
+  { mbid: "8bit", title: "Hotel California (8-Bit The Eagles Emulation)", artist: "8-Bit Arcade", year: 2019, releaseCount: 1 },
+  { mbid: "pimpdaddy", title: "Hotel California Hurts (Lizzo vs. The Eagles)", artist: "Pimpdaddysupreme", year: 2021, releaseCount: 1 },
+  { mbid: "machalski", title: "Hotel California - The Eagles", artist: "Tadeusz Machalski", year: null, releaseCount: 2 },
+  { mbid: "original", title: "Hotel California", artist: "Eagles", year: 1977, releaseCount: 30 },
 ];
 
 describe("rankRecordings", () => {
@@ -38,6 +38,15 @@ describe("rankRecordings", () => {
   it("keeps the original near the top on a title-only query", () => {
     const ranked = rankRecordings(RESULTS, "Hotel California");
     expect(ranked[0].mbid).toBe("original");
+  });
+
+  it("uses release count to promote an original with no release year over dated covers", () => {
+    const undated = [
+      { mbid: "cover-1977", title: "Hotel California", artist: "Shuky & Aviva", year: 1977, releaseCount: 2 },
+      { mbid: "original-undated", title: "Hotel California", artist: "Eagles", year: null, releaseCount: 30 },
+      { mbid: "cover-1994", title: "Hotel California", artist: "The Nashville SuperPickers", year: 1994, releaseCount: 1 },
+    ];
+    expect(rankRecordings(undated, "Hotel California")[0].mbid).toBe("original-undated");
   });
 
   it("keeps MusicBrainz order for equally scored results", () => {

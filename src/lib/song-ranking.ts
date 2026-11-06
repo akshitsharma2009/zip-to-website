@@ -158,8 +158,9 @@ export function rankRecordings<T extends RankableSong>(
     .map(({ recording }) => recording);
 }
 
-/** Earlier release years win the tie — originals predate their covers. */
+/** Unknown years rank first: originals often carry no release year in
+ * search results, while covers almost always do. */
 function yearTiebreak(a: number | null, b: number | null): number {
-  if (a === null || b === null) return (a === null ? 1 : 0) - (b === null ? 1 : 0);
+  if (a === null || b === null) return (a === null ? 0 : 1) - (b === null ? 0 : 1);
   return a - b;
 }

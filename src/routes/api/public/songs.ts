@@ -24,6 +24,7 @@ interface MusicBrainzRecording {
   title: string;
   "first-release-date"?: string;
   "artist-credit"?: Array<{ name: string; joinphrase?: string }>;
+  releases?: unknown[];
 }
 
 interface SongSearchResult {
@@ -31,6 +32,8 @@ interface SongSearchResult {
   title: string;
   artist: string;
   year: number | null;
+  /** Ranking helper only; stripped from the API response. */
+  releaseCount: number;
 }
 
 interface SongRow {
@@ -130,10 +133,14 @@ async function handleSearch(body: { query?: unknown }): Promise<Response> {
       title: rec.title,
       artist,
       year,
+      // Ranking helper only; stripped from the response below.
+      releaseCount: rec["releases"]?.length ?? 0,
     };
   });
 
-  const ranked = rankRecordings(results, trimmed);
+  const ranked = rankRecordings(results, trimmed).map(
+    ({ releaseCount: _releaseCount, ...song }) => song,
+  );
 
   return Response.json({ results: ranked }, { headers: corsHeaders });
 }
