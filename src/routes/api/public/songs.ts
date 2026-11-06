@@ -24,6 +24,7 @@ interface MusicBrainzRecording {
   title: string;
   "first-release-date"?: string;
   "artist-credit"?: Array<{ name: string; joinphrase?: string }>;
+  releases?: unknown[];
 }
 
 interface SongSearchResult {
@@ -31,6 +32,8 @@ interface SongSearchResult {
   title: string;
   artist: string;
   year: number | null;
+  /** Ranking helper only; stripped from the API response. */
+  releaseCount: number;
 }
 
 interface SongRow {
