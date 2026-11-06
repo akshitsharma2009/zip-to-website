@@ -130,10 +130,14 @@ async function handleSearch(body: { query?: unknown }): Promise<Response> {
       title: rec.title,
       artist,
       year,
+      // Ranking helper only; stripped from the response below.
+      releaseCount: rec["releases"]?.length ?? 0,
     };
   });
 
-  const ranked = rankRecordings(results, trimmed);
+  const ranked = rankRecordings(results, trimmed).map(
+    ({ releaseCount: _releaseCount, ...song }) => song,
+  );
 
   return Response.json({ results: ranked }, { headers: corsHeaders });
 }
