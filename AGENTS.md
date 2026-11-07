@@ -14,3 +14,4 @@
 - The song catalog API stays at POST /api/public/songs (search via MusicBrainz, add via supabaseAdmin with mbid dedup). songs has no client-side INSERT policy by design; mbid is the only valid song identity key and its UNIQUE constraint must never be removed.
 - Song search results are re-ranked server-side by src/lib/song-ranking.ts (covered by src/test/song-ranking.test.ts) because MusicBrainz relevance buries original recordings under covers; tune scoring there, not in the route.
 - consent_log is insert-only (no UPDATE/DELETE policies) to preserve the signup consent audit trail; POLICY_VERSION in src/lib/envoke-constants.ts must match the policy pages' "Last updated" date.
+- Keep memory-image metadata and per-memory image limits in database migrations; storage stays private with object access governed by parent-memory visibility.

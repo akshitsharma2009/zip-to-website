@@ -25,8 +25,8 @@ The project uses **Bolt's own built-in database and auth** (not a separate Supab
 - [ ] `songs` table with `mbid` (MusicBrainz ID) as a **UNIQUE** column — this must exist before any song-insert logic is built
 - [ ] Song search/insert flow: query MusicBrainz first, then `INSERT ... ON CONFLICT (mbid) DO NOTHING` to avoid duplicate races
 - [x] `memories` table with `is_public` flag + RLS policy (public OR owner)
-- [ ] Private `memory-images` storage bucket + `{memory_id}/{filename}` path convention
-- [ ] Storage RLS policy on `memory-images` mirroring the memories visibility rule
+- [x] Private `memory-images` storage bucket + `{memory_id}/{filename}` path convention
+- [x] Storage RLS policy on `memory-images` mirroring the memories visibility rule
 - [ ] Image display always via short-lived `createSignedUrl()` — no permanent/public URLs anywhere in the app
 - [ ] Song detail page (UI)
 - [ ] Write-a-memory flow: text + optional image, defaults to private with a one-tap toggle to public, signup wall triggers before entry starts (not mid-draft)
