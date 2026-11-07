@@ -67,7 +67,14 @@ function artistLikeTokens(recordings: RankableSong[], queryTokens: string[]): Se
   const tokens = new Set<string>();
   for (const recording of recordings) {
     const artistTokens = tokenize(recording.artist);
-    if (artistTokens.length > 0 && artistTokens.every((t) => queryTokens.includes(t))) {
+    // Must cover only part of the query: an "artist" whose name is the whole
+    // query (e.g. a band called "Hotel California") would otherwise strip
+    // title credit from every result.
+    if (
+      artistTokens.length > 0 &&
+      artistTokens.length < queryTokens.length &&
+      artistTokens.every((t) => queryTokens.includes(t))
+    ) {
       artistTokens.forEach((t) => tokens.add(t));
     }
   }
