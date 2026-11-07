@@ -70,6 +70,35 @@ export type Database = {
           },
         ]
       }
+      memory_images: {
+        Row: {
+          created_at: string
+          id: string
+          memory_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          memory_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          memory_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_images_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       songs: {
         Row: {
           artist: string
