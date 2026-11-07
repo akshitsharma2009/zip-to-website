@@ -16,7 +16,7 @@ const RESULTS = [
 describe("rankRecordings", () => {
   it("ranks the original Eagles recording first when the artist is part of the query", () => {
     const ranked = rankRecordings(RESULTS, "Hotel California Eagles");
-    expect(ranked[0].mbid).toBe("original");
+    expect(ranked[0]!.mbid).toBe("original");
   });
 
   it("ranks covers and mashups below the original", () => {
@@ -37,7 +37,7 @@ describe("rankRecordings", () => {
 
   it("keeps the original near the top on a title-only query", () => {
     const ranked = rankRecordings(RESULTS, "Hotel California");
-    expect(ranked[0].mbid).toBe("original");
+    expect(ranked[0]!.mbid).toBe("original");
   });
 
   it("uses release count to promote an original with no release year over dated covers", () => {
@@ -46,7 +46,7 @@ describe("rankRecordings", () => {
       { mbid: "original-undated", title: "Hotel California", artist: "Eagles", year: null, releaseCount: 30 },
       { mbid: "cover-1994", title: "Hotel California", artist: "The Nashville SuperPickers", year: 1994, releaseCount: 1 },
     ];
-    expect(rankRecordings(undated, "Hotel California")[0].mbid).toBe("original-undated");
+    expect(rankRecordings(undated, "Hotel California")[0]!.mbid).toBe("original-undated");
   });
 
   it("keeps MusicBrainz order for equally scored results", () => {
@@ -61,8 +61,8 @@ describe("rankRecordings", () => {
 describe("scoreRecording", () => {
   it("rewards the exact artist-and-title recording over variants", () => {
     const query = "Hotel California Eagles";
-    const original = scoreRecording(RESULTS[5], query);
-    const cover = scoreRecording(RESULTS[2], query);
+    const original = scoreRecording(RESULTS[5]!, query);
+    const cover = scoreRecording(RESULTS[2]!, query);
     expect(original).toBeGreaterThan(cover);
   });
 
