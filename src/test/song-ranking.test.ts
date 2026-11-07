@@ -61,7 +61,7 @@ describe("rankRecordings", () => {
 describe("scoreRecording", () => {
   it("rewards the exact artist-and-title recording over variants", () => {
     const query = "Hotel California Eagles";
-    const original = scoreRecording(RESULTS[5]!, query);
+    const original = scoreRecording(RESULTS[6]!, query);
     const cover = scoreRecording(RESULTS[2]!, query);
     expect(original).toBeGreaterThan(cover);
   });
