@@ -248,7 +248,7 @@ async function createSongAddDependencies(): Promise<SongAddDependencies> {
   return {
     findExisting: async (mbid) => supabaseAdmin.from("songs").select("*").eq("mbid", mbid).maybeSingle(),
     fetchRecording: async (mbid) =>
-      fetch(`https://musicbrainz.org/ws/2/recording/${encodeURIComponent(mbid)}?fmt=json`, {
+      fetch(`https://musicbrainz.org/ws/2/recording/${encodeURIComponent(mbid)}?fmt=json&inc=artists`, {
         headers: { "User-Agent": musicBrainzUserAgent, Accept: "application/json" },
       }),
     insertIfAbsent: async (song) =>
