@@ -155,7 +155,7 @@ async function handleSearch(body: { query?: unknown }): Promise<Response> {
 }
 
 export async function handleAdd(
-  body: { mbid?: unknown },
+  body: { mbid?: unknown; [key: string]: unknown },
   suppliedDependencies?: SongAddDependencies,
 ): Promise<Response> {
   if (typeof body.mbid !== "string" || !isUuid(body.mbid.trim())) {
