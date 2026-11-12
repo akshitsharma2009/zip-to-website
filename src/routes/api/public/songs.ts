@@ -19,6 +19,8 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+const musicBrainzUserAgent = "Envoke/1.0 (https://envoke.lovable.app)";
+
 interface MusicBrainzRecording {
   id: string;
   title: string;
@@ -46,21 +48,28 @@ interface SongRow {
   created_at: string;
 }
 
+interface SongAddDependencies {
+  findExisting: (mbid: string) => Promise<{ data: SongRow | null; error: { message: string } | null }>;
+  fetchRecording: (mbid: string) => Promise<Response>;
+  insertIfAbsent: (song: { mbid: string; title: string; artist: string; year: number | null }) => Promise<{
+    data: SongRow | null;
+    error: { message: string } | null;
+  }>;
+  findAfterConflict: (mbid: string) => Promise<{ data: SongRow | null; error: { message: string } | null }>;
+}
+
 export const Route = createFileRoute("/api/public/songs")({
   server: {
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       POST: async ({ request }) => {
-        let body: {
-          action?: unknown;
-          query?: unknown;
-          mbid?: unknown;
-          title?: unknown;
-          artist?: unknown;
-          year?: unknown;
-        };
+        let body: { action?: unknown; query?: unknown; mbid?: unknown };
         try {
-          body = await request.json();
+          const parsed: unknown = await request.json();
+          if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+            throw new Error("A JSON object is required");
+          }
+          body = parsed as { action?: unknown; query?: unknown; mbid?: unknown };
         } catch {
           return Response.json(
             { error: "A JSON body is required" },
@@ -98,7 +107,7 @@ async function handleSearch(body: { query?: unknown }): Promise<Response> {
     `https://musicbrainz.org/ws/2/recording?query=${encodeURIComponent(trimmed)}&fmt=json&limit=50`,
     {
       headers: {
-        "User-Agent": "Envoke/1.0 (envoke.app)",
+        "User-Agent": musicBrainzUserAgent,
         Accept: "application/json",
       },
     },
@@ -145,41 +154,24 @@ async function handleSearch(body: { query?: unknown }): Promise<Response> {
   return Response.json({ results: ranked }, { headers: corsHeaders });
 }
 
-async function handleAdd(body: {
-  mbid?: unknown;
-  title?: unknown;
-  artist?: unknown;
-  year?: unknown;
-}): Promise<Response> {
-  if (typeof body.mbid !== "string" || body.mbid.trim().length === 0) {
+export async function handleAdd(
+  body: { mbid?: unknown; [key: string]: unknown },
+  suppliedDependencies?: SongAddDependencies,
+): Promise<Response> {
+  if (typeof body.mbid !== "string" || !isUuid(body.mbid.trim())) {
     return Response.json(
-      { error: "An 'mbid' string is required" },
-      { status: 400, headers: corsHeaders },
-    );
-  }
-  if (typeof body.title !== "string") {
-    return Response.json(
-      { error: "A 'title' string is required" },
-      { status: 400, headers: corsHeaders },
-    );
-  }
-  if (typeof body.artist !== "string") {
-    return Response.json(
-      { error: "An 'artist' string is required" },
+      { error: "A valid UUID 'mbid' is required" },
       { status: 400, headers: corsHeaders },
     );
   }
 
-  const year =
-    typeof body.year === "number" && Number.isInteger(body.year) ? body.year : null;
+  const mbid = body.mbid.trim().toLowerCase();
+  const dependencies = suppliedDependencies ?? (await createSongAddDependencies());
+  const { data: existing, error: existingError } = await dependencies.findExisting(mbid);
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  const { data: existing } = await supabaseAdmin
-    .from("songs")
-    .select("*")
-    .eq("mbid", body.mbid.trim())
-    .maybeSingle();
+  if (existingError) {
+    return Response.json({ error: "Could not check the song catalog" }, { status: 500, headers: corsHeaders });
+  }
 
   if (existing) {
     return Response.json(
@@ -188,40 +180,83 @@ async function handleAdd(body: {
     );
   }
 
-  const { data: inserted, error: insertError } = await supabaseAdmin
-    .from("songs")
-    .insert({
-      mbid: body.mbid.trim(),
-      title: body.title.trim(),
-      artist: body.artist.trim(),
-      year,
-    })
-    .select("*")
-    .single();
+  let musicBrainzResponse: Response;
+  try {
+    musicBrainzResponse = await dependencies.fetchRecording(mbid);
+  } catch {
+    return musicBrainzUnavailableResponse();
+  }
+
+  if (musicBrainzResponse.status === 404) {
+    return Response.json({ error: "MusicBrainz has no recording with that MBID" }, { status: 404, headers: corsHeaders });
+  }
+  if (!musicBrainzResponse.ok) {
+    return musicBrainzUnavailableResponse();
+  }
+
+  let recording: MusicBrainzRecording;
+  try {
+    recording = (await musicBrainzResponse.json()) as MusicBrainzRecording;
+  } catch {
+    return musicBrainzUnavailableResponse();
+  }
+
+  const title = typeof recording.title === "string" ? recording.title.trim() : "";
+  const artist = recording["artist-credit"]
+    ?.map((credit) => `${credit.name}${credit.joinphrase ?? ""}`)
+    .join("")
+    .trim();
+  if (recording.id?.toLowerCase() !== mbid || !title || !artist) {
+    return musicBrainzUnavailableResponse();
+  }
+
+  const yearMatch = recording["first-release-date"]?.match(/^(\d{4})/);
+  const year = yearMatch ? Number(yearMatch[1]) : null;
+  const { data: inserted, error: insertError } = await dependencies.insertIfAbsent({ mbid, title, artist, year });
 
   if (insertError) {
-    if (insertError.code === "23505") {
-      const { data: existing2 } = await supabaseAdmin
-        .from("songs")
-        .select("*")
-        .eq("mbid", body.mbid.trim())
-        .maybeSingle();
-
-      if (existing2) {
-        return Response.json(
-          { song: existing2 as SongRow, created: false },
-          { headers: corsHeaders },
-        );
-      }
-    }
     return Response.json(
-      { error: insertError.message },
+      { error: "Could not add the song to the catalog" },
       { status: 500, headers: corsHeaders },
     );
   }
 
+  if (inserted) {
+    return Response.json({ song: inserted, created: true }, { headers: corsHeaders });
+  }
+
+  const { data: rowAfterConflict, error: lookupError } = await dependencies.findAfterConflict(mbid);
+  if (lookupError || !rowAfterConflict) {
+    return Response.json({ error: "Could not retrieve the song from the catalog" }, { status: 500, headers: corsHeaders });
+  }
+  return Response.json({ song: rowAfterConflict, created: false }, { headers: corsHeaders });
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value);
+}
+
+function musicBrainzUnavailableResponse(): Response {
   return Response.json(
-    { song: inserted as SongRow, created: true },
-    { headers: corsHeaders },
+    { error: "MusicBrainz is temporarily unavailable. Please try again shortly." },
+    { status: 503, headers: corsHeaders },
   );
+}
+
+async function createSongAddDependencies(): Promise<SongAddDependencies> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return {
+    findExisting: async (mbid) => supabaseAdmin.from("songs").select("*").eq("mbid", mbid).maybeSingle(),
+    fetchRecording: async (mbid) =>
+      fetch(`https://musicbrainz.org/ws/2/recording/${encodeURIComponent(mbid)}?fmt=json&inc=artists`, {
+        headers: { "User-Agent": musicBrainzUserAgent, Accept: "application/json" },
+      }),
+    insertIfAbsent: async (song) =>
+      supabaseAdmin
+        .from("songs")
+        .upsert(song, { onConflict: "mbid", ignoreDuplicates: true })
+        .select("*")
+        .maybeSingle(),
+    findAfterConflict: async (mbid) => supabaseAdmin.from("songs").select("*").eq("mbid", mbid).maybeSingle(),
+  };
 }
